@@ -1,5 +1,9 @@
 # Registry Cleaner & Optimizer
 
+[![Release](https://img.shields.io/github/v/release/hassantvs24/registry-optimizer)](https://github.com/hassantvs24/registry-optimizer/releases/latest)
+
+**[Download the latest release](https://github.com/hassantvs24/registry-optimizer/releases/latest)** — installer or portable exe.
+
 A Windows desktop app (Advanced System Optimizer style) focused entirely on **registry tools**:
 
 - **Registry Cleaner** — Quick and Deep scans across 8 issue categories (missing file references,
