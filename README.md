@@ -1,6 +1,7 @@
 # Registry Cleaner & Optimizer
 
 [![Release](https://img.shields.io/github/v/release/hassantvs24/registry-optimizer)](https://github.com/hassantvs24/registry-optimizer/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 **[Download the latest release](https://github.com/hassantvs24/registry-optimizer/releases/latest)** — installer or portable exe.
 
