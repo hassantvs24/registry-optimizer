@@ -1,0 +1,183 @@
+<UserControl x:Class="RegistryOptimizer.Views.ScanView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:RegistryOptimizer.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="640" d:DesignWidth="900">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header + controls -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+            <TextBlock Text="Registry Cleaner" Style="{StaticResource SectionHeader}" Margin="0"/>
+            <RadioButton Content="Quick scan" GroupName="Profile" Margin="24,0,0,0"
+                         IsChecked="{Binding Profile, Converter={StaticResource EnumToBool}, ConverterParameter=Quick}">
+                <RadioButton.ToolTip>
+                    <TextBlock TextWrapping="Wrap" MaxWidth="260"
+                               Text="Fast scan of everyday-safe categories (recommended for regular use)."/>
+                </RadioButton.ToolTip>
+            </RadioButton>
+            <RadioButton Content="Deep scan" GroupName="Profile" Margin="12,0,0,0"
+                         IsChecked="{Binding Profile, Converter={StaticResource EnumToBool}, ConverterParameter=Deep}">
+                <RadioButton.ToolTip>
+                    <TextBlock TextWrapping="Wrap" MaxWidth="260"
+                               Text="Thorough scan that also checks aggressive categories like COM objects and usage history. Slower, review carefully before fixing."/>
+                </RadioButton.ToolTip>
+            </RadioButton>
+            <Button Content="Start Scan" Style="{StaticResource PrimaryButton}" MinWidth="120" Margin="24,0,0,0"
+                    Command="{Binding StartScanCommand}"
+                    IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBool}}">
+                <Button.ToolTip>
+                    <TextBlock TextWrapping="Wrap" MaxWidth="260"
+                               Text="Scans the registry for problems. This is 100% read-only — nothing is changed."/>
+                </Button.ToolTip>
+            </Button>
+            <Button Content="Cancel" Style="{StaticResource SecondaryButton}" MinWidth="80" Margin="8,0,0,0"
+                    Command="{Binding CancelScanCommand}"
+                    IsEnabled="{Binding IsScanning}">
+                <Button.ToolTip>
+                    <TextBlock Text="Stop the scan that is currently running." TextWrapping="Wrap" MaxWidth="260"/>
+                </Button.ToolTip>
+            </Button>
+        </StackPanel>
+
+        <!-- Guidance banner -->
+        <Border Grid.Row="1" Style="{StaticResource InfoBanner}" Margin="0,8">
+            <TextBlock Style="{StaticResource InfoBannerText}"
+                       Text="Scans are 100% read-only — nothing changes until you press Fix Selected. A backup is taken automatically and you can undo everything in Rescue Center."/>
+        </Border>
+
+        <!-- Status + progress -->
+        <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,8">
+            <StackPanel>
+                <Grid>
+                    <TextBlock Style="{StaticResource HintText}" Text="{Binding StatusText}"/>
+                    <TextBlock HorizontalAlignment="Right" Style="{StaticResource HintText}"
+                               Text="{Binding ProgressPercent, StringFormat={}{0:F0}%}"/>
+                </Grid>
+                <ProgressBar Value="{Binding ProgressPercent}" Margin="0,6,0,0"/>
+                <TextBlock Style="{StaticResource HintText}" Margin="0,6,0,0" TextWrapping="Wrap"
+                           Text="{Binding SummaryText}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter + select buttons -->
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="2,2,2,6" VerticalAlignment="Center">
+            <TextBlock Text="Category:" VerticalAlignment="Center" Margin="0,0,6,0"/>
+            <ComboBox ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding CategoryFilter}"
+                      MinWidth="170" VerticalAlignment="Center">
+                <ComboBox.ToolTip>
+                    <TextBlock Text="Show only issues from one category." TextWrapping="Wrap" MaxWidth="240"/>
+                </ComboBox.ToolTip>
+            </ComboBox>
+            <Button Content="Select safe" Style="{StaticResource SecondaryButton}" Margin="14,0,0,0"
+                    Command="{Binding SelectSafeOnlyCommand}">
+                <Button.ToolTip>
+                    <TextBlock TextWrapping="Wrap" MaxWidth="260"
+                               Text="Check only items rated Safe — the ones least likely to affect installed software."/>
+                </Button.ToolTip>
+            </Button>
+            <Button Content="Select all" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0"
+                    Command="{Binding SelectAllCommand}">
+                <Button.ToolTip>
+                    <TextBlock Text="Check every found item, including Advanced ones." TextWrapping="Wrap" MaxWidth="240"/>
+                </Button.ToolTip>
+            </Button>
+            <Button Content="Select none" Style="{StaticResource SecondaryButton}" Margin="6,0,0,0"
+                    Command="{Binding SelectNoneCommand}">
+                <Button.ToolTip>
+                    <TextBlock Text="Uncheck all items." TextWrapping="Wrap" MaxWidth="240"/>
+                </Button.ToolTip>
+            </Button>
+        </StackPanel>
+
+        <!-- Results grid (+ empty-state hint) -->
+        <Grid Grid.Row="4">
+            <DataGrid ItemsSource="{Binding Results}" SelectionMode="Single">
+                <DataGrid.Columns>
+                    <DataGridCheckBoxColumn Header="" Width="36"
+                                            Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"/>
+                    <DataGridTemplateColumn Header="Severity" Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal">
+                                    <ContentPresenter ContentTemplate="{StaticResource SeverityDotTemplate}"/>
+                                    <TextBlock Text="{Binding SeverityText}" Margin="6,0,0,0"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                    <DataGridTextColumn Header="Category" Width="130" Binding="{Binding CategoryText}"/>
+                    <DataGridTextColumn Header="Registry Path" Width="3*" Binding="{Binding FullPath}">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                <Setter Property="ToolTip" Value="{Binding FullPath}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Value" Width="120" Binding="{Binding ValueText}"/>
+                    <DataGridTextColumn Header="Reason" Width="2*" Binding="{Binding Reason}">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                <Setter Property="ToolTip" Value="{Binding Reason}"/>
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTemplateColumn Header="" Width="70">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="Ignore" Style="{StaticResource SecondaryButton}" Padding="6,2"
+                                        Command="{Binding DataContext.IgnoreCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.ToolTip>
+                                        <TextBlock Text="Hide this item from all future scans." TextWrapping="Wrap" MaxWidth="240"/>
+                                    </Button.ToolTip>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <Border Style="{StaticResource InfoBanner}" Margin="20,40"
+                    Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVis}}"
+                    HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="420">
+                <TextBlock Style="{StaticResource InfoBannerText}" TextAlignment="Center"
+                           Text="{Binding EmptyHintText}"/>
+            </Border>
+        </Grid>
+
+        <!-- Bottom bar -->
+        <Border Grid.Row="5" Style="{StaticResource Card}" Margin="0,8,0,0" Padding="12">
+            <StackPanel>
+                <TextBlock Visibility="{Binding AdvancedWarningVisible, Converter={StaticResource BoolToVis}}"
+                           Foreground="{StaticResource WarningBrush}" TextWrapping="Wrap" Margin="0,0,0,6"
+                           Text="Advanced items may affect installed software — review carefully."/>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Fix Selected" Style="{StaticResource PrimaryButton}" MinWidth="140"
+                            Command="{Binding FixSelectedCommand}"
+                            IsEnabled="{Binding IsScanning, Converter={StaticResource InverseBool}}">
+                        <Button.ToolTip>
+                            <TextBlock TextWrapping="Wrap" MaxWidth="280"
+                                       Text="Backs up the selected items first, then removes them from the registry. You can undo this later in Rescue Center."/>
+                        </Button.ToolTip>
+                    </Button>
+                    <TextBlock Style="{StaticResource HintText}" Margin="14,0,0,0"
+                               Text="{Binding SelectedSummaryText}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

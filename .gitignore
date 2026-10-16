@@ -1,0 +1,24 @@
+# Build output
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# Publish artifacts (large binaries — attach to GitHub Releases instead of committing)
+dist/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs
+*.log

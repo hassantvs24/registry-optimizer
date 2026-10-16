@@ -1,0 +1,128 @@
+<UserControl x:Class="RegistryOptimizer.Views.DefragView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="640" d:DesignWidth="900">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+    <ScrollViewer>
+        <Grid Margin="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: gauge + analyze -->
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="Registry Optimizer" Style="{StaticResource SectionHeader}"/>
+                <Border Style="{StaticResource InfoBanner}" Margin="6,0,6,10">
+                    <TextBlock Style="{StaticResource InfoBannerText}"
+                               Text="Analyze measures fragmentation of all registry hives (read-only, safe). Optimize compacts them at the next boot and Windows finishes the swap on the boot after that. A full backup is made first."/>
+                </Border>
+                <Border Style="{StaticResource Card}" Padding="0">
+                    <StackPanel>
+                        <!-- 180-degree gauge -->
+                        <Viewbox Stretch="Uniform" MaxHeight="180" Margin="10,10,10,0">
+                            <Grid Width="220" Height="205">
+                                <Path Stroke="{StaticResource SurfaceBrush}" StrokeThickness="16"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round">
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure StartPoint="20,110">
+                                                <ArcSegment Point="200,110" Size="90,90" SweepDirection="Clockwise"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                                <Path Stroke="{Binding GaugeBrush}" StrokeThickness="16"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="{Binding OverallPercent, Converter={StaticResource GaugeArc}}"/>
+                            </Grid>
+                        </Viewbox>
+                        <TextBlock HorizontalAlignment="Center" FontSize="32" FontWeight="Bold" Margin="0,-28,0,0"
+                                   Text="{Binding OverallPercent, StringFormat={}{0:F1}%}"/>
+                        <TextBlock HorizontalAlignment="Center" Style="{StaticResource HintText}" Margin="0,0,0,14"
+                                   Text="average fragmentation"/>
+                        <TextBlock HorizontalAlignment="Center" Style="{StaticResource HintText}" Margin="0,-8,0,12"
+                                   Text="below 10% is good · 10–25% consider optimizing · above 25% recommended"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Text="{Binding StatusText}"/>
+                        <Button Content="Analyze" Style="{StaticResource PrimaryButton}" MinWidth="140"
+                                HorizontalAlignment="Left" Margin="0,10,0,0"
+                                Command="{Binding AnalyzeCommand}"
+                                IsEnabled="{Binding IsAnalyzing, Converter={StaticResource InverseBool}}">
+                            <Button.ToolTip>
+                                <TextBlock TextWrapping="Wrap" MaxWidth="260"
+                                           Text="Measures internal fragmentation of every registry hive, including the locked system hives (read via a VSS snapshot). Nothing is changed."/>
+                            </Button.ToolTip>
+                        </Button>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="Optimization" Style="{StaticResource CardTitle}"/>
+                        <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap" Text="{Binding ScheduleText}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                            <Button Content="Optimize Registry" Style="{StaticResource PrimaryButton}" MinWidth="150"
+                                    Command="{Binding OptimizeCommand}"
+                                    IsEnabled="{Binding IsBusy, Converter={StaticResource InverseBool}}">
+                                <Button.ToolTip>
+                                    <TextBlock TextWrapping="Wrap" MaxWidth="280"
+                                               Text="Schedules boot-time compaction of the registry hives. Requires two reboots to complete; a full backup is made first."/>
+                                </Button.ToolTip>
+                            </Button>
+                            <Button Content="Cancel scheduling" Style="{StaticResource SecondaryButton}"
+                                    Margin="8,0,0,0" Command="{Binding CancelScheduleCommand}"
+                                    Visibility="{Binding IsScheduled, Converter={StaticResource BoolToVis}}">
+                                <Button.ToolTip>
+                                    <TextBlock Text="Removes the pending boot-time optimization before it runs." TextWrapping="Wrap" MaxWidth="240"/>
+                                </Button.ToolTip>
+                            </Button>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource HintText}" Margin="0,10,0,0" TextWrapping="Wrap"
+                                   Text="{Binding LastReportText}"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Right: hive table -->
+            <Border Grid.Column="1" Style="{StaticResource Card}" Margin="6,52,6,6" VerticalAlignment="Stretch">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Hive files" Style="{StaticResource CardTitle}"/>
+                    <DataGrid ItemsSource="{Binding Hives}" SelectionMode="Single" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Name" Width="*" Binding="{Binding Name}"/>
+                            <DataGridTextColumn Header="File" Width="2*" Binding="{Binding FilePath}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding FilePath}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Size (MB)" Width="90"
+                                                Binding="{Binding FileSizeBytes, Converter={StaticResource BytesToMb}}"/>
+                            <DataGridTextColumn Header="Free %" Width="80" Binding="{Binding FreeSpacePercent, StringFormat={}{0:F1}}"/>
+                            <DataGridTextColumn Header="Fragmentation %" Width="110"
+                                                Binding="{Binding FragmentationPercent, StringFormat={}{0:F1}}"/>
+                            <DataGridTextColumn Header="Status" Width="2*" Binding="{Binding StatusText}">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                        <Setter Property="ToolTip" Value="{Binding StatusText}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
